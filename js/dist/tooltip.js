@@ -4,8 +4,8 @@
   * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
   */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('./dom/data.js'), require('./dom/eventHandler.js'), require('./dom/manipulator.js'), require('popper.js'), require('./dom/selectorEngine.js')) :
-  typeof define === 'function' && define.amd ? define(['./dom/data.js', './dom/eventHandler.js', './dom/manipulator.js', 'popper.js', './dom/selectorEngine.js'], factory) :
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('../dom/data.js'), require('../dom/event-handler.js'), require('../dom/manipulator.js'), require('popper.js'), require('../dom/selector-engine.js')) :
+  typeof define === 'function' && define.amd ? define(['../dom/data.js', '../dom/event-handler.js', '../dom/manipulator.js', 'popper.js', '../dom/selector-engine.js'], factory) :
   (global = global || self, global.Tooltip = factory(global.Data, global.EventHandler, global.Manipulator, global.Popper, global.SelectorEngine));
 }(this, function (Data, EventHandler, Manipulator, Popper, SelectorEngine) { 'use strict';
 
@@ -46,20 +46,35 @@
     return obj;
   }
 
-  function _objectSpread(target) {
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+      if (enumerableOnly) symbols = symbols.filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+      });
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
     for (var i = 1; i < arguments.length; i++) {
       var source = arguments[i] != null ? arguments[i] : {};
-      var ownKeys = Object.keys(source);
 
-      if (typeof Object.getOwnPropertySymbols === 'function') {
-        ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) {
-          return Object.getOwnPropertyDescriptor(source, sym).enumerable;
-        }));
+      if (i % 2) {
+        ownKeys(source, true).forEach(function (key) {
+          _defineProperty(target, key, source[key]);
+        });
+      } else if (Object.getOwnPropertyDescriptors) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+      } else {
+        ownKeys(source).forEach(function (key) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        });
       }
-
-      ownKeys.forEach(function (key) {
-        _defineProperty(target, key, source[key]);
-      });
     }
 
     return target;
@@ -74,7 +89,8 @@
   var MAX_UID = 1000000;
   var MILLISECONDS_MULTIPLIER = 1000;
   var TRANSITION_END = 'transitionend';
-  var jQuery = window.jQuery; // Shoutout AngusCroll (https://goo.gl/pxwQGp)
+  var _window = window,
+      jQuery = _window.jQuery; // Shoutout AngusCroll (https://goo.gl/pxwQGp)
 
   var toType = function toType(obj) {
     return {}.toString.call(obj).match(/\s([a-z]+)/i)[1].toLowerCase();
@@ -119,7 +135,9 @@
   };
 
   var triggerTransitionEnd = function triggerTransitionEnd(element) {
-    element.dispatchEvent(new Event(TRANSITION_END));
+    var evt = document.createEvent('HTMLEvents');
+    evt.initEvent(TRANSITION_END, true, true);
+    element.dispatchEvent(evt);
   };
 
   var isElement = function isElement(obj) {
@@ -305,7 +323,7 @@
     };
 
     for (var i = 0, len = elements.length; i < len; i++) {
-      var _ret = _loop(i, len);
+      var _ret = _loop(i);
 
       if (_ret === "continue") continue;
     }
@@ -371,7 +389,7 @@
     SHOW: 'show',
     OUT: 'out'
   };
-  var Event$1 = {
+  var Event = {
     HIDE: "hide" + EVENT_KEY,
     HIDDEN: "hidden" + EVENT_KEY,
     SHOW: "show" + EVENT_KEY,
@@ -388,9 +406,7 @@
     SHOW: 'show'
   };
   var Selector = {
-    TOOLTIP: '.tooltip',
-    TOOLTIP_INNER: '.tooltip-inner',
-    TOOLTIP_ARROW: '.tooltip-arrow'
+    TOOLTIP_INNER: '.tooltip-inner'
   };
   var Trigger = {
     HOVER: 'hover',
@@ -485,7 +501,7 @@
       clearTimeout(this._timeout);
       Data.removeData(this.element, this.constructor.DATA_KEY);
       EventHandler.off(this.element, this.constructor.EVENT_KEY);
-      EventHandler.off(SelectorEngine.closest(this.element, '.modal'), 'hide.bs.modal');
+      EventHandler.off(SelectorEngine.closest(this.element, '.modal'), 'hide.bs.modal', this._hideModalHandler);
 
       if (this.tip) {
         this.tip.parentNode.removeChild(this.tip);
@@ -516,7 +532,7 @@
       if (this.isWithContent() && this._isEnabled) {
         var showEvent = EventHandler.trigger(this.element, this.constructor.Event.SHOW);
         var shadowRoot = findShadowRoot(this.element);
-        var isInTheDom = shadowRoot !== null ? shadowRoot.contains(this.element) : this.element.ownerDocument.documentElement.contains(this.element);
+        var isInTheDom = shadowRoot === null ? this.element.ownerDocument.documentElement.contains(this.element) : shadowRoot.contains(this.element);
 
         if (showEvent.defaultPrevented || !isInTheDom) {
           return;
@@ -536,7 +552,7 @@
 
         var attachment = this._getAttachment(placement);
 
-        this.addAttachmentClass(attachment);
+        this._addAttachmentClass(attachment);
 
         var container = this._getContainer();
 
@@ -555,7 +571,7 @@
               behavior: this.config.fallbackPlacement
             },
             arrow: {
-              element: Selector.TOOLTIP_ARROW
+              element: "." + this.constructor.NAME + "-arrow"
             },
             preventOverflow: {
               boundariesElement: this.config.boundary
@@ -605,7 +621,7 @@
       }
     };
 
-    _proto.hide = function hide(callback) {
+    _proto.hide = function hide() {
       var _this2 = this;
 
       var tip = this.getTipElement();
@@ -621,13 +637,7 @@
 
         EventHandler.trigger(_this2.element, _this2.constructor.Event.HIDDEN);
 
-        if (_this2._popper !== null) {
-          _this2._popper.destroy();
-        }
-
-        if (callback) {
-          callback();
-        }
+        _this2._popper.destroy();
       };
 
       var hideEvent = EventHandler.trigger(this.element, this.constructor.Event.HIDE);
@@ -671,10 +681,6 @@
       return Boolean(this.getTitle());
     };
 
-    _proto.addAttachmentClass = function addAttachmentClass(attachment) {
-      this.getTipElement().classList.add(CLASS_PREFIX + "-" + attachment);
-    };
-
     _proto.getTipElement = function getTipElement() {
       if (this.tip) {
         return this.tip;
@@ -698,7 +704,7 @@
         return;
       }
 
-      if (typeof content === 'object' && (content.nodeType || content.jquery)) {
+      if (typeof content === 'object' && isElement(content)) {
         if (content.jquery) {
           content = content[0];
         } // content is a DOM node or a jQuery
@@ -738,6 +744,10 @@
     } // Private
     ;
 
+    _proto._addAttachmentClass = function _addAttachmentClass(attachment) {
+      this.getTipElement().classList.add(CLASS_PREFIX + "-" + attachment);
+    };
+
     _proto._getOffset = function _getOffset() {
       var _this3 = this;
 
@@ -745,7 +755,7 @@
 
       if (typeof this.config.offset === 'function') {
         offset.fn = function (data) {
-          data.offsets = _objectSpread({}, data.offsets, _this3.config.offset(data.offsets, _this3.element) || {});
+          data.offsets = _objectSpread2({}, data.offsets, {}, _this3.config.offset(data.offsets, _this3.element) || {});
           return data;
         };
       } else {
@@ -791,14 +801,17 @@
           });
         }
       });
-      EventHandler.on(SelectorEngine.closest(this.element, '.modal'), 'hide.bs.modal', function () {
+
+      this._hideModalHandler = function () {
         if (_this4.element) {
           _this4.hide();
         }
-      });
+      };
+
+      EventHandler.on(SelectorEngine.closest(this.element, '.modal'), 'hide.bs.modal', this._hideModalHandler);
 
       if (this.config.selector) {
-        this.config = _objectSpread({}, this.config, {
+        this.config = _objectSpread2({}, this.config, {
           trigger: 'manual',
           selector: ''
         });
@@ -903,7 +916,7 @@
         config.container = config.container[0];
       }
 
-      config = _objectSpread({}, this.constructor.Default, dataAttributes, typeof config === 'object' && config ? config : {});
+      config = _objectSpread2({}, this.constructor.Default, {}, dataAttributes, {}, typeof config === 'object' && config ? config : {});
 
       if (typeof config.delay === 'number') {
         config.delay = {
@@ -962,7 +975,7 @@
 
       this._cleanTipClass();
 
-      this.addAttachmentClass(this._getAttachment(popperData.placement));
+      this._addAttachmentClass(this._getAttachment(popperData.placement));
     };
 
     _proto._fixTransition = function _fixTransition() {
@@ -1032,7 +1045,7 @@
     }, {
       key: "Event",
       get: function get() {
-        return Event$1;
+        return Event;
       }
     }, {
       key: "EVENT_KEY",
@@ -1054,6 +1067,8 @@
    * ------------------------------------------------------------------------
    * add .tooltip to jQuery only if jQuery is present
    */
+
+  /* istanbul ignore if */
 
 
   if (typeof jQuery !== 'undefined') {

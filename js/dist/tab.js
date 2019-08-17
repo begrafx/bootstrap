@@ -4,8 +4,8 @@
   * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
   */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('./dom/data.js'), require('./dom/eventHandler.js'), require('./dom/selectorEngine.js')) :
-  typeof define === 'function' && define.amd ? define(['./dom/data.js', './dom/eventHandler.js', './dom/selectorEngine.js'], factory) :
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('../dom/data.js'), require('../dom/event-handler.js'), require('../dom/selector-engine.js')) :
+  typeof define === 'function' && define.amd ? define(['../dom/data.js', '../dom/event-handler.js', '../dom/selector-engine.js'], factory) :
   (global = global || self, global.Tab = factory(global.Data, global.EventHandler, global.SelectorEngine));
 }(this, function (Data, EventHandler, SelectorEngine) { 'use strict';
 
@@ -37,7 +37,8 @@
    */
   var MILLISECONDS_MULTIPLIER = 1000;
   var TRANSITION_END = 'transitionend';
-  var jQuery = window.jQuery; // Shoutout AngusCroll (https://goo.gl/pxwQGp)
+  var _window = window,
+      jQuery = _window.jQuery; // Shoutout AngusCroll (https://goo.gl/pxwQGp)
 
   var getSelectorFromElement = function getSelectorFromElement(element) {
     var selector = element.getAttribute('data-target');
@@ -49,7 +50,7 @@
 
     try {
       return document.querySelector(selector) ? selector : null;
-    } catch (err) {
+    } catch (error) {
       return null;
     }
   };
@@ -78,7 +79,9 @@
   };
 
   var triggerTransitionEnd = function triggerTransitionEnd(element) {
-    element.dispatchEvent(new Event(TRANSITION_END));
+    var evt = document.createEvent('HTMLEvents');
+    evt.initEvent(TRANSITION_END, true, true);
+    element.dispatchEvent(evt);
   };
 
   var emulateTransitionEnd = function emulateTransitionEnd(element, duration) {
@@ -122,7 +125,7 @@
   var DATA_KEY = 'bs.tab';
   var EVENT_KEY = "." + DATA_KEY;
   var DATA_API_KEY = '.data-api';
-  var Event$1 = {
+  var Event = {
     HIDE: "hide" + EVENT_KEY,
     HIDDEN: "hidden" + EVENT_KEY,
     SHOW: "show" + EVENT_KEY,
@@ -185,12 +188,12 @@
       var hideEvent = null;
 
       if (previous) {
-        hideEvent = EventHandler.trigger(previous, Event$1.HIDE, {
+        hideEvent = EventHandler.trigger(previous, Event.HIDE, {
           relatedTarget: this._element
         });
       }
 
-      var showEvent = EventHandler.trigger(this._element, Event$1.SHOW, {
+      var showEvent = EventHandler.trigger(this._element, Event.SHOW, {
         relatedTarget: previous
       });
 
@@ -205,10 +208,10 @@
       this._activate(this._element, listElement);
 
       var complete = function complete() {
-        EventHandler.trigger(previous, Event$1.HIDDEN, {
+        EventHandler.trigger(previous, Event.HIDDEN, {
           relatedTarget: _this._element
         });
-        EventHandler.trigger(_this._element, Event$1.SHOWN, {
+        EventHandler.trigger(_this._element, Event.SHOWN, {
           relatedTarget: previous
         });
       };
@@ -325,7 +328,7 @@
    */
 
 
-  EventHandler.on(document, Event$1.CLICK_DATA_API, Selector.DATA_TOGGLE, function (event) {
+  EventHandler.on(document, Event.CLICK_DATA_API, Selector.DATA_TOGGLE, function (event) {
     event.preventDefault();
     var data = Data.getData(this, DATA_KEY) || new Tab(this);
     data.show();
@@ -336,6 +339,8 @@
    * ------------------------------------------------------------------------
    * add .tab to jQuery only if jQuery is present
    */
+
+  /* istanbul ignore if */
 
   if (typeof jQuery !== 'undefined') {
     var JQUERY_NO_CONFLICT = jQuery.fn[NAME];

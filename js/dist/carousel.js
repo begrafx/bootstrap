@@ -4,8 +4,8 @@
   * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
   */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('./dom/data.js'), require('./dom/eventHandler.js'), require('./dom/manipulator.js'), require('./dom/selectorEngine.js')) :
-  typeof define === 'function' && define.amd ? define(['./dom/data.js', './dom/eventHandler.js', './dom/manipulator.js', './dom/selectorEngine.js'], factory) :
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('../dom/data.js'), require('../dom/event-handler.js'), require('../dom/manipulator.js'), require('../dom/selector-engine.js')) :
+  typeof define === 'function' && define.amd ? define(['../dom/data.js', '../dom/event-handler.js', '../dom/manipulator.js', '../dom/selector-engine.js'], factory) :
   (global = global || self, global.Carousel = factory(global.Data, global.EventHandler, global.Manipulator, global.SelectorEngine));
 }(this, function (Data, EventHandler, Manipulator, SelectorEngine) { 'use strict';
 
@@ -45,20 +45,35 @@
     return obj;
   }
 
-  function _objectSpread(target) {
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+      if (enumerableOnly) symbols = symbols.filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+      });
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
     for (var i = 1; i < arguments.length; i++) {
       var source = arguments[i] != null ? arguments[i] : {};
-      var ownKeys = Object.keys(source);
 
-      if (typeof Object.getOwnPropertySymbols === 'function') {
-        ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) {
-          return Object.getOwnPropertyDescriptor(source, sym).enumerable;
-        }));
+      if (i % 2) {
+        ownKeys(source, true).forEach(function (key) {
+          _defineProperty(target, key, source[key]);
+        });
+      } else if (Object.getOwnPropertyDescriptors) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+      } else {
+        ownKeys(source).forEach(function (key) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        });
       }
-
-      ownKeys.forEach(function (key) {
-        _defineProperty(target, key, source[key]);
-      });
     }
 
     return target;
@@ -72,7 +87,8 @@
    */
   var MILLISECONDS_MULTIPLIER = 1000;
   var TRANSITION_END = 'transitionend';
-  var jQuery = window.jQuery; // Shoutout AngusCroll (https://goo.gl/pxwQGp)
+  var _window = window,
+      jQuery = _window.jQuery; // Shoutout AngusCroll (https://goo.gl/pxwQGp)
 
   var toType = function toType(obj) {
     return {}.toString.call(obj).match(/\s([a-z]+)/i)[1].toLowerCase();
@@ -88,7 +104,7 @@
 
     try {
       return document.querySelector(selector) ? selector : null;
-    } catch (err) {
+    } catch (error) {
       return null;
     }
   };
@@ -117,7 +133,9 @@
   };
 
   var triggerTransitionEnd = function triggerTransitionEnd(element) {
-    element.dispatchEvent(new Event(TRANSITION_END));
+    var evt = document.createEvent('HTMLEvents');
+    evt.initEvent(TRANSITION_END, true, true);
+    element.dispatchEvent(evt);
   };
 
   var isElement = function isElement(obj) {
@@ -218,7 +236,7 @@
     LEFT: 'left',
     RIGHT: 'right'
   };
-  var Event$1 = {
+  var Event = {
     SLIDE: "slide" + EVENT_KEY,
     SLID: "slid" + EVENT_KEY,
     KEYDOWN: "keydown" + EVENT_KEY,
@@ -353,7 +371,7 @@
       }
 
       if (this._isSliding) {
-        EventHandler.one(this._element, Event$1.SLID, function () {
+        EventHandler.one(this._element, Event.SLID, function () {
           return _this.to(index);
         });
         return;
@@ -385,7 +403,7 @@
     ;
 
     _proto._getConfig = function _getConfig(config) {
-      config = _objectSpread({}, Default, config);
+      config = _objectSpread2({}, Default, {}, config);
       typeCheckConfig(NAME, config, DefaultType);
       return config;
     };
@@ -397,7 +415,8 @@
         return;
       }
 
-      var direction = absDeltax / this.touchDeltaX; // swipe left
+      var direction = absDeltax / this.touchDeltaX;
+      this.touchDeltaX = 0; // swipe left
 
       if (direction > 0) {
         this.prev();
@@ -413,31 +432,27 @@
       var _this2 = this;
 
       if (this._config.keyboard) {
-        EventHandler.on(this._element, Event$1.KEYDOWN, function (event) {
+        EventHandler.on(this._element, Event.KEYDOWN, function (event) {
           return _this2._keydown(event);
         });
       }
 
       if (this._config.pause === 'hover') {
-        EventHandler.on(this._element, Event$1.MOUSEENTER, function (event) {
+        EventHandler.on(this._element, Event.MOUSEENTER, function (event) {
           return _this2.pause(event);
         });
-        EventHandler.on(this._element, Event$1.MOUSELEAVE, function (event) {
+        EventHandler.on(this._element, Event.MOUSELEAVE, function (event) {
           return _this2.cycle(event);
         });
       }
 
-      if (this._config.touch) {
+      if (this._config.touch && this._touchSupported) {
         this._addTouchEventListeners();
       }
     };
 
     _proto._addTouchEventListeners = function _addTouchEventListeners() {
       var _this3 = this;
-
-      if (!this._touchSupported) {
-        return;
-      }
 
       var start = function start(event) {
         if (_this3._pointerEvent && PointerType[event.pointerType.toUpperCase()]) {
@@ -484,28 +499,28 @@
       };
 
       makeArray(SelectorEngine.find(Selector.ITEM_IMG, this._element)).forEach(function (itemImg) {
-        EventHandler.on(itemImg, Event$1.DRAG_START, function (e) {
+        EventHandler.on(itemImg, Event.DRAG_START, function (e) {
           return e.preventDefault();
         });
       });
 
       if (this._pointerEvent) {
-        EventHandler.on(this._element, Event$1.POINTERDOWN, function (event) {
+        EventHandler.on(this._element, Event.POINTERDOWN, function (event) {
           return start(event);
         });
-        EventHandler.on(this._element, Event$1.POINTERUP, function (event) {
+        EventHandler.on(this._element, Event.POINTERUP, function (event) {
           return end(event);
         });
 
         this._element.classList.add(ClassName.POINTER_EVENT);
       } else {
-        EventHandler.on(this._element, Event$1.TOUCHSTART, function (event) {
+        EventHandler.on(this._element, Event.TOUCHSTART, function (event) {
           return start(event);
         });
-        EventHandler.on(this._element, Event$1.TOUCHMOVE, function (event) {
+        EventHandler.on(this._element, Event.TOUCHMOVE, function (event) {
           return move(event);
         });
-        EventHandler.on(this._element, Event$1.TOUCHEND, function (event) {
+        EventHandler.on(this._element, Event.TOUCHEND, function (event) {
           return end(event);
         });
       }
@@ -559,7 +574,7 @@
 
       var fromIndex = this._getItemIndex(SelectorEngine.findOne(Selector.ACTIVE_ITEM, this._element));
 
-      return EventHandler.trigger(this._element, Event$1.SLIDE, {
+      return EventHandler.trigger(this._element, Event.SLIDE, {
         relatedTarget: relatedTarget,
         direction: eventDirectionName,
         from: fromIndex,
@@ -657,7 +672,7 @@
           activeElement.classList.remove(directionalClassName);
           _this4._isSliding = false;
           setTimeout(function () {
-            EventHandler.trigger(_this4._element, Event$1.SLID, {
+            EventHandler.trigger(_this4._element, Event.SLID, {
               relatedTarget: nextElement,
               direction: eventDirectionName,
               from: activeElementIndex,
@@ -670,7 +685,7 @@
         activeElement.classList.remove(ClassName.ACTIVE);
         nextElement.classList.add(ClassName.ACTIVE);
         this._isSliding = false;
-        EventHandler.trigger(this._element, Event$1.SLID, {
+        EventHandler.trigger(this._element, Event.SLID, {
           relatedTarget: nextElement,
           direction: eventDirectionName,
           from: activeElementIndex,
@@ -687,10 +702,10 @@
     Carousel._carouselInterface = function _carouselInterface(element, config) {
       var data = Data.getData(element, DATA_KEY);
 
-      var _config = _objectSpread({}, Default, Manipulator.getDataAttributes(element));
+      var _config = _objectSpread2({}, Default, {}, Manipulator.getDataAttributes(element));
 
       if (typeof config === 'object') {
-        _config = _objectSpread({}, _config, config);
+        _config = _objectSpread2({}, _config, {}, config);
       }
 
       var action = typeof config === 'string' ? config : _config.slide;
@@ -703,7 +718,7 @@
         data.to(config);
       } else if (typeof action === 'string') {
         if (typeof data[action] === 'undefined') {
-          throw new Error("No method named \"" + action + "\"");
+          throw new TypeError("No method named \"" + action + "\"");
         }
 
         data[action]();
@@ -732,7 +747,7 @@
         return;
       }
 
-      var config = _objectSpread({}, Manipulator.getDataAttributes(target), Manipulator.getDataAttributes(this));
+      var config = _objectSpread2({}, Manipulator.getDataAttributes(target), {}, Manipulator.getDataAttributes(this));
 
       var slideIndex = this.getAttribute('data-slide-to');
 
@@ -774,8 +789,8 @@
    */
 
 
-  EventHandler.on(document, Event$1.CLICK_DATA_API, Selector.DATA_SLIDE, Carousel._dataApiClickHandler);
-  EventHandler.on(window, Event$1.LOAD_DATA_API, function () {
+  EventHandler.on(document, Event.CLICK_DATA_API, Selector.DATA_SLIDE, Carousel._dataApiClickHandler);
+  EventHandler.on(window, Event.LOAD_DATA_API, function () {
     var carousels = makeArray(SelectorEngine.find(Selector.DATA_RIDE));
 
     for (var i = 0, len = carousels.length; i < len; i++) {
@@ -788,6 +803,8 @@
    * ------------------------------------------------------------------------
    * add .carousel to jQuery only if jQuery is present
    */
+
+  /* istanbul ignore if */
 
   if (typeof jQuery !== 'undefined') {
     var JQUERY_NO_CONFLICT = jQuery.fn[NAME];

@@ -4,8 +4,8 @@
   * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
   */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('./dom/data.js'), require('./dom/eventHandler.js'), require('./dom/selectorEngine.js')) :
-  typeof define === 'function' && define.amd ? define(['./dom/data.js', './dom/eventHandler.js', './dom/selectorEngine.js'], factory) :
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('../dom/data.js'), require('../dom/event-handler.js'), require('../dom/selector-engine.js')) :
+  typeof define === 'function' && define.amd ? define(['../dom/data.js', '../dom/event-handler.js', '../dom/selector-engine.js'], factory) :
   (global = global || self, global.Button = factory(global.Data, global.EventHandler, global.SelectorEngine));
 }(this, function (Data, EventHandler, SelectorEngine) { 'use strict';
 
@@ -35,7 +35,8 @@
    * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
    * --------------------------------------------------------------------------
    */
-  var jQuery = window.jQuery; // Shoutout AngusCroll (https://goo.gl/pxwQGp)
+  var _window = window,
+      jQuery = _window.jQuery; // Shoutout AngusCroll (https://goo.gl/pxwQGp)
 
   /**
    * ------------------------------------------------------------------------
@@ -180,18 +181,23 @@
 
     if (!data) {
       data = new Button(button);
-      Data.setData(button, DATA_KEY, data);
     }
 
     data.toggle();
   });
   EventHandler.on(document, Event.FOCUS_DATA_API, Selector.DATA_TOGGLE_CARROT, function (event) {
     var button = SelectorEngine.closest(event.target, Selector.BUTTON);
-    button.classList.add(ClassName.FOCUS);
+
+    if (button) {
+      button.classList.add(ClassName.FOCUS);
+    }
   });
   EventHandler.on(document, Event.BLUR_DATA_API, Selector.DATA_TOGGLE_CARROT, function (event) {
     var button = SelectorEngine.closest(event.target, Selector.BUTTON);
-    button.classList.remove(ClassName.FOCUS);
+
+    if (button) {
+      button.classList.remove(ClassName.FOCUS);
+    }
   });
   /**
    * ------------------------------------------------------------------------
@@ -199,6 +205,8 @@
    * ------------------------------------------------------------------------
    * add .button to jQuery only if jQuery is present
    */
+
+  /* istanbul ignore if */
 
   if (typeof jQuery !== 'undefined') {
     var JQUERY_NO_CONFLICT = jQuery.fn[NAME];

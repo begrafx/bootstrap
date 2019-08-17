@@ -4,8 +4,8 @@
   * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
   */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('./dom/data.js'), require('./dom/eventHandler.js'), require('./dom/manipulator.js')) :
-  typeof define === 'function' && define.amd ? define(['./dom/data.js', './dom/eventHandler.js', './dom/manipulator.js'], factory) :
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('../dom/data.js'), require('../dom/event-handler.js'), require('../dom/manipulator.js')) :
+  typeof define === 'function' && define.amd ? define(['../dom/data.js', '../dom/event-handler.js', '../dom/manipulator.js'], factory) :
   (global = global || self, global.Toast = factory(global.Data, global.EventHandler, global.Manipulator));
 }(this, function (Data, EventHandler, Manipulator) { 'use strict';
 
@@ -44,20 +44,35 @@
     return obj;
   }
 
-  function _objectSpread(target) {
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+      if (enumerableOnly) symbols = symbols.filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+      });
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
     for (var i = 1; i < arguments.length; i++) {
       var source = arguments[i] != null ? arguments[i] : {};
-      var ownKeys = Object.keys(source);
 
-      if (typeof Object.getOwnPropertySymbols === 'function') {
-        ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) {
-          return Object.getOwnPropertyDescriptor(source, sym).enumerable;
-        }));
+      if (i % 2) {
+        ownKeys(source, true).forEach(function (key) {
+          _defineProperty(target, key, source[key]);
+        });
+      } else if (Object.getOwnPropertyDescriptors) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+      } else {
+        ownKeys(source).forEach(function (key) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        });
       }
-
-      ownKeys.forEach(function (key) {
-        _defineProperty(target, key, source[key]);
-      });
     }
 
     return target;
@@ -71,7 +86,8 @@
    */
   var MILLISECONDS_MULTIPLIER = 1000;
   var TRANSITION_END = 'transitionend';
-  var jQuery = window.jQuery; // Shoutout AngusCroll (https://goo.gl/pxwQGp)
+  var _window = window,
+      jQuery = _window.jQuery; // Shoutout AngusCroll (https://goo.gl/pxwQGp)
 
   var toType = function toType(obj) {
     return {}.toString.call(obj).match(/\s([a-z]+)/i)[1].toLowerCase();
@@ -101,7 +117,9 @@
   };
 
   var triggerTransitionEnd = function triggerTransitionEnd(element) {
-    element.dispatchEvent(new Event(TRANSITION_END));
+    var evt = document.createEvent('HTMLEvents');
+    evt.initEvent(TRANSITION_END, true, true);
+    element.dispatchEvent(evt);
   };
 
   var isElement = function isElement(obj) {
@@ -138,6 +156,10 @@
     });
   };
 
+  var reflow = function reflow(element) {
+    return element.offsetHeight;
+  };
+
   /**
    * ------------------------------------------------------------------------
    * Constants
@@ -148,7 +170,7 @@
   var VERSION = '4.3.1';
   var DATA_KEY = 'bs.toast';
   var EVENT_KEY = "." + DATA_KEY;
-  var Event$1 = {
+  var Event = {
     CLICK_DISMISS: "click.dismiss" + EVENT_KEY,
     HIDE: "hide" + EVENT_KEY,
     HIDDEN: "hidden" + EVENT_KEY,
@@ -201,7 +223,11 @@
     _proto.show = function show() {
       var _this = this;
 
-      EventHandler.trigger(this._element, Event$1.SHOW);
+      var showEvent = EventHandler.trigger(this._element, Event.SHOW);
+
+      if (showEvent.defaultPrevented) {
+        return;
+      }
 
       if (this._config.animation) {
         this._element.classList.add(ClassName.FADE);
@@ -212,14 +238,18 @@
 
         _this._element.classList.add(ClassName.SHOW);
 
-        EventHandler.trigger(_this._element, Event$1.SHOWN);
+        EventHandler.trigger(_this._element, Event.SHOWN);
 
         if (_this._config.autohide) {
-          _this.hide();
+          _this._timeout = setTimeout(function () {
+            _this.hide();
+          }, _this._config.delay);
         }
       };
 
       this._element.classList.remove(ClassName.HIDE);
+
+      reflow(this._element);
 
       this._element.classList.add(ClassName.SHOWING);
 
@@ -232,60 +262,23 @@
       }
     };
 
-    _proto.hide = function hide(withoutTimeout) {
+    _proto.hide = function hide() {
       var _this2 = this;
 
       if (!this._element.classList.contains(ClassName.SHOW)) {
         return;
       }
 
-      EventHandler.trigger(this._element, Event$1.HIDE);
+      var hideEvent = EventHandler.trigger(this._element, Event.HIDE);
 
-      if (withoutTimeout) {
-        this._close();
-      } else {
-        this._timeout = setTimeout(function () {
-          _this2._close();
-        }, this._config.delay);
+      if (hideEvent.defaultPrevented) {
+        return;
       }
-    };
-
-    _proto.dispose = function dispose() {
-      clearTimeout(this._timeout);
-      this._timeout = null;
-
-      if (this._element.classList.contains(ClassName.SHOW)) {
-        this._element.classList.remove(ClassName.SHOW);
-      }
-
-      EventHandler.off(this._element, Event$1.CLICK_DISMISS);
-      Data.removeData(this._element, DATA_KEY);
-      this._element = null;
-      this._config = null;
-    } // Private
-    ;
-
-    _proto._getConfig = function _getConfig(config) {
-      config = _objectSpread({}, Default, Manipulator.getDataAttributes(this._element), typeof config === 'object' && config ? config : {});
-      typeCheckConfig(NAME, config, this.constructor.DefaultType);
-      return config;
-    };
-
-    _proto._setListeners = function _setListeners() {
-      var _this3 = this;
-
-      EventHandler.on(this._element, Event$1.CLICK_DISMISS, Selector.DATA_DISMISS, function () {
-        return _this3.hide(true);
-      });
-    };
-
-    _proto._close = function _close() {
-      var _this4 = this;
 
       var complete = function complete() {
-        _this4._element.classList.add(ClassName.HIDE);
+        _this2._element.classList.add(ClassName.HIDE);
 
-        EventHandler.trigger(_this4._element, Event$1.HIDDEN);
+        EventHandler.trigger(_this2._element, Event.HIDDEN);
       };
 
       this._element.classList.remove(ClassName.SHOW);
@@ -297,6 +290,35 @@
       } else {
         complete();
       }
+    };
+
+    _proto.dispose = function dispose() {
+      clearTimeout(this._timeout);
+      this._timeout = null;
+
+      if (this._element.classList.contains(ClassName.SHOW)) {
+        this._element.classList.remove(ClassName.SHOW);
+      }
+
+      EventHandler.off(this._element, Event.CLICK_DISMISS);
+      Data.removeData(this._element, DATA_KEY);
+      this._element = null;
+      this._config = null;
+    } // Private
+    ;
+
+    _proto._getConfig = function _getConfig(config) {
+      config = _objectSpread2({}, Default, {}, Manipulator.getDataAttributes(this._element), {}, typeof config === 'object' && config ? config : {});
+      typeCheckConfig(NAME, config, this.constructor.DefaultType);
+      return config;
+    };
+
+    _proto._setListeners = function _setListeners() {
+      var _this3 = this;
+
+      EventHandler.on(this._element, Event.CLICK_DISMISS, Selector.DATA_DISMISS, function () {
+        return _this3.hide();
+      });
     } // Static
     ;
 
@@ -349,6 +371,8 @@
    * ------------------------------------------------------------------------
    *  add .toast to jQuery only if jQuery is present
    */
+
+  /* istanbul ignore if */
 
 
   if (typeof jQuery !== 'undefined') {

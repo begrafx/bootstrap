@@ -4,8 +4,8 @@
   * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
   */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('./dom/data.js'), require('./dom/eventHandler.js'), require('./dom/manipulator.js'), require('./dom/selectorEngine.js')) :
-  typeof define === 'function' && define.amd ? define(['./dom/data.js', './dom/eventHandler.js', './dom/manipulator.js', './dom/selectorEngine.js'], factory) :
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('../dom/data.js'), require('../dom/event-handler.js'), require('../dom/manipulator.js'), require('../dom/selector-engine.js')) :
+  typeof define === 'function' && define.amd ? define(['../dom/data.js', '../dom/event-handler.js', '../dom/manipulator.js', '../dom/selector-engine.js'], factory) :
   (global = global || self, global.Modal = factory(global.Data, global.EventHandler, global.Manipulator, global.SelectorEngine));
 }(this, function (Data, EventHandler, Manipulator, SelectorEngine) { 'use strict';
 
@@ -45,20 +45,35 @@
     return obj;
   }
 
-  function _objectSpread(target) {
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+      if (enumerableOnly) symbols = symbols.filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+      });
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
     for (var i = 1; i < arguments.length; i++) {
       var source = arguments[i] != null ? arguments[i] : {};
-      var ownKeys = Object.keys(source);
 
-      if (typeof Object.getOwnPropertySymbols === 'function') {
-        ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) {
-          return Object.getOwnPropertyDescriptor(source, sym).enumerable;
-        }));
+      if (i % 2) {
+        ownKeys(source, true).forEach(function (key) {
+          _defineProperty(target, key, source[key]);
+        });
+      } else if (Object.getOwnPropertyDescriptors) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+      } else {
+        ownKeys(source).forEach(function (key) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        });
       }
-
-      ownKeys.forEach(function (key) {
-        _defineProperty(target, key, source[key]);
-      });
     }
 
     return target;
@@ -72,7 +87,8 @@
    */
   var MILLISECONDS_MULTIPLIER = 1000;
   var TRANSITION_END = 'transitionend';
-  var jQuery = window.jQuery; // Shoutout AngusCroll (https://goo.gl/pxwQGp)
+  var _window = window,
+      jQuery = _window.jQuery; // Shoutout AngusCroll (https://goo.gl/pxwQGp)
 
   var toType = function toType(obj) {
     return {}.toString.call(obj).match(/\s([a-z]+)/i)[1].toLowerCase();
@@ -88,7 +104,7 @@
 
     try {
       return document.querySelector(selector) ? selector : null;
-    } catch (err) {
+    } catch (error) {
       return null;
     }
   };
@@ -117,7 +133,9 @@
   };
 
   var triggerTransitionEnd = function triggerTransitionEnd(element) {
-    element.dispatchEvent(new Event(TRANSITION_END));
+    var evt = document.createEvent('HTMLEvents');
+    evt.initEvent(TRANSITION_END, true, true);
+    element.dispatchEvent(evt);
   };
 
   var isElement = function isElement(obj) {
@@ -203,7 +221,7 @@
     focus: 'boolean',
     show: 'boolean'
   };
-  var Event$1 = {
+  var Event = {
     HIDE: "hide" + EVENT_KEY,
     HIDDEN: "hidden" + EVENT_KEY,
     SHOW: "show" + EVENT_KEY,
@@ -274,7 +292,7 @@
         this._isTransitioning = true;
       }
 
-      var showEvent = EventHandler.trigger(this._element, Event$1.SHOW, {
+      var showEvent = EventHandler.trigger(this._element, Event.SHOW, {
         relatedTarget: relatedTarget
       });
 
@@ -294,11 +312,11 @@
 
       this._setResizeEvent();
 
-      EventHandler.on(this._element, Event$1.CLICK_DISMISS, Selector.DATA_DISMISS, function (event) {
+      EventHandler.on(this._element, Event.CLICK_DISMISS, Selector.DATA_DISMISS, function (event) {
         return _this.hide(event);
       });
-      EventHandler.on(this._dialog, Event$1.MOUSEDOWN_DISMISS, function () {
-        EventHandler.one(_this._element, Event$1.MOUSEUP_DISMISS, function (event) {
+      EventHandler.on(this._dialog, Event.MOUSEDOWN_DISMISS, function () {
+        EventHandler.one(_this._element, Event.MOUSEUP_DISMISS, function (event) {
           if (event.target === _this._element) {
             _this._ignoreBackdropClick = true;
           }
@@ -321,9 +339,9 @@
         return;
       }
 
-      var hideEvent = EventHandler.trigger(this._element, Event$1.HIDE);
+      var hideEvent = EventHandler.trigger(this._element, Event.HIDE);
 
-      if (!this._isShown || hideEvent.defaultPrevented) {
+      if (hideEvent.defaultPrevented) {
         return;
       }
 
@@ -339,12 +357,12 @@
 
       this._setResizeEvent();
 
-      EventHandler.off(document, Event$1.FOCUSIN);
+      EventHandler.off(document, Event.FOCUSIN);
 
       this._element.classList.remove(ClassName.SHOW);
 
-      EventHandler.off(this._element, Event$1.CLICK_DISMISS);
-      EventHandler.off(this._dialog, Event$1.MOUSEDOWN_DISMISS);
+      EventHandler.off(this._element, Event.CLICK_DISMISS);
+      EventHandler.off(this._dialog, Event.MOUSEDOWN_DISMISS);
 
       if (transition) {
         var transitionDuration = getTransitionDurationFromElement(this._element);
@@ -367,7 +385,7 @@
        * It will remove `Event.CLICK_DATA_API` event that should remain
        */
 
-      EventHandler.off(document, Event$1.FOCUSIN);
+      EventHandler.off(document, Event.FOCUSIN);
       Data.removeData(this._element, DATA_KEY);
       this._config = null;
       this._element = null;
@@ -386,7 +404,7 @@
     ;
 
     _proto._getConfig = function _getConfig(config) {
-      config = _objectSpread({}, Default, config);
+      config = _objectSpread2({}, Default, {}, config);
       typeCheckConfig(NAME, config, DefaultType);
       return config;
     };
@@ -429,7 +447,7 @@
         }
 
         _this3._isTransitioning = false;
-        EventHandler.trigger(_this3._element, Event$1.SHOWN, {
+        EventHandler.trigger(_this3._element, Event.SHOWN, {
           relatedTarget: relatedTarget
         });
       };
@@ -446,9 +464,9 @@
     _proto._enforceFocus = function _enforceFocus() {
       var _this4 = this;
 
-      EventHandler.off(document, Event$1.FOCUSIN); // guard against infinite focus loop
+      EventHandler.off(document, Event.FOCUSIN); // guard against infinite focus loop
 
-      EventHandler.on(document, Event$1.FOCUSIN, function (event) {
+      EventHandler.on(document, Event.FOCUSIN, function (event) {
         if (document !== event.target && _this4._element !== event.target && !_this4._element.contains(event.target)) {
           _this4._element.focus();
         }
@@ -459,15 +477,15 @@
       var _this5 = this;
 
       if (this._isShown && this._config.keyboard) {
-        EventHandler.on(this._element, Event$1.KEYDOWN_DISMISS, function (event) {
+        EventHandler.on(this._element, Event.KEYDOWN_DISMISS, function (event) {
           if (event.which === ESCAPE_KEYCODE) {
             event.preventDefault();
 
             _this5.hide();
           }
         });
-      } else if (!this._isShown) {
-        EventHandler.off(this._element, Event$1.KEYDOWN_DISMISS);
+      } else {
+        EventHandler.off(this._element, Event.KEYDOWN_DISMISS);
       }
     };
 
@@ -475,11 +493,11 @@
       var _this6 = this;
 
       if (this._isShown) {
-        EventHandler.on(window, Event$1.RESIZE, function (event) {
-          return _this6.handleUpdate(event);
+        EventHandler.on(window, Event.RESIZE, function () {
+          return _this6._adjustDialog();
         });
       } else {
-        EventHandler.off(window, Event$1.RESIZE);
+        EventHandler.off(window, Event.RESIZE);
       }
     };
 
@@ -501,16 +519,14 @@
 
         _this7._resetScrollbar();
 
-        EventHandler.trigger(_this7._element, Event$1.HIDDEN);
+        EventHandler.trigger(_this7._element, Event.HIDDEN);
       });
     };
 
     _proto._removeBackdrop = function _removeBackdrop() {
-      if (this._backdrop) {
-        this._backdrop.parentNode.removeChild(this._backdrop);
+      this._backdrop.parentNode.removeChild(this._backdrop);
 
-        this._backdrop = null;
-      }
+      this._backdrop = null;
     };
 
     _proto._showBackdrop = function _showBackdrop(callback) {
@@ -527,7 +543,7 @@
         }
 
         document.body.appendChild(this._backdrop);
-        EventHandler.on(this._element, Event$1.CLICK_DISMISS, function (event) {
+        EventHandler.on(this._element, Event.CLICK_DISMISS, function (event) {
           if (_this8._ignoreBackdropClick) {
             _this8._ignoreBackdropClick = false;
             return;
@@ -550,10 +566,6 @@
 
         this._backdrop.classList.add(ClassName.SHOW);
 
-        if (!callback) {
-          return;
-        }
-
         if (!animate) {
           callback();
           return;
@@ -568,9 +580,7 @@
         var callbackRemove = function callbackRemove() {
           _this8._removeBackdrop();
 
-          if (callback) {
-            callback();
-          }
+          callback();
         };
 
         if (this._element.classList.contains(ClassName.FADE)) {
@@ -581,12 +591,11 @@
         } else {
           callbackRemove();
         }
-      } else if (callback) {
+      } else {
         callback();
       }
     } // ----------------------------------------------------------------------
     // the following methods are used to handle overflowing modals
-    // todo (fat): these should probably be refactored out of modal.js
     // ----------------------------------------------------------------------
     ;
 
@@ -665,11 +674,11 @@
 
       var padding = Manipulator.getDataAttribute(document.body, 'padding-right');
 
-      if (typeof padding !== 'undefined') {
+      if (typeof padding === 'undefined') {
+        document.body.style.paddingRight = '';
+      } else {
         Manipulator.removeDataAttribute(document.body, 'padding-right');
         document.body.style.paddingRight = padding;
-      } else {
-        document.body.style.paddingRight = '';
       }
     };
 
@@ -688,7 +697,7 @@
       return this.each(function () {
         var data = Data.getData(this, DATA_KEY);
 
-        var _config = _objectSpread({}, Default, Manipulator.getDataAttributes(this), typeof config === 'object' && config ? config : {});
+        var _config = _objectSpread2({}, Default, {}, Manipulator.getDataAttributes(this), {}, typeof config === 'object' && config ? config : {});
 
         if (!data) {
           data = new Modal(this, _config);
@@ -731,29 +740,23 @@
    */
 
 
-  EventHandler.on(document, Event$1.CLICK_DATA_API, Selector.DATA_TOGGLE, function (event) {
+  EventHandler.on(document, Event.CLICK_DATA_API, Selector.DATA_TOGGLE, function (event) {
     var _this10 = this;
 
-    var target;
     var selector = getSelectorFromElement(this);
-
-    if (selector) {
-      target = SelectorEngine.findOne(selector);
-    }
-
-    var config = Data.getData(target, DATA_KEY) ? 'toggle' : _objectSpread({}, Manipulator.getDataAttributes(target), Manipulator.getDataAttributes(this));
+    var target = SelectorEngine.findOne(selector);
 
     if (this.tagName === 'A' || this.tagName === 'AREA') {
       event.preventDefault();
     }
 
-    EventHandler.one(target, Event$1.SHOW, function (showEvent) {
+    EventHandler.one(target, Event.SHOW, function (showEvent) {
       if (showEvent.defaultPrevented) {
         // only register focus restorer if modal will actually get shown
         return;
       }
 
-      EventHandler.one(target, Event$1.HIDDEN, function () {
+      EventHandler.one(target, Event.HIDDEN, function () {
         if (isVisible(_this10)) {
           _this10.focus();
         }
@@ -762,6 +765,8 @@
     var data = Data.getData(target, DATA_KEY);
 
     if (!data) {
+      var config = _objectSpread2({}, Manipulator.getDataAttributes(target), {}, Manipulator.getDataAttributes(this));
+
       data = new Modal(target, config);
     }
 
@@ -771,7 +776,10 @@
    * ------------------------------------------------------------------------
    * jQuery
    * ------------------------------------------------------------------------
+   * add .modal to jQuery only if jQuery is present
    */
+
+  /* istanbul ignore if */
 
   if (typeof jQuery !== 'undefined') {
     var JQUERY_NO_CONFLICT = jQuery.fn[NAME];

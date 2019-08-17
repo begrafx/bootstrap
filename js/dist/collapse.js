@@ -4,8 +4,8 @@
   * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
   */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('./dom/data.js'), require('./dom/eventHandler.js'), require('./dom/manipulator.js'), require('./dom/selectorEngine.js')) :
-  typeof define === 'function' && define.amd ? define(['./dom/data.js', './dom/eventHandler.js', './dom/manipulator.js', './dom/selectorEngine.js'], factory) :
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory(require('../dom/data.js'), require('../dom/event-handler.js'), require('../dom/manipulator.js'), require('../dom/selector-engine.js')) :
+  typeof define === 'function' && define.amd ? define(['../dom/data.js', '../dom/event-handler.js', '../dom/manipulator.js', '../dom/selector-engine.js'], factory) :
   (global = global || self, global.Collapse = factory(global.Data, global.EventHandler, global.Manipulator, global.SelectorEngine));
 }(this, function (Data, EventHandler, Manipulator, SelectorEngine) { 'use strict';
 
@@ -45,20 +45,35 @@
     return obj;
   }
 
-  function _objectSpread(target) {
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+      if (enumerableOnly) symbols = symbols.filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+      });
+      keys.push.apply(keys, symbols);
+    }
+
+    return keys;
+  }
+
+  function _objectSpread2(target) {
     for (var i = 1; i < arguments.length; i++) {
       var source = arguments[i] != null ? arguments[i] : {};
-      var ownKeys = Object.keys(source);
 
-      if (typeof Object.getOwnPropertySymbols === 'function') {
-        ownKeys = ownKeys.concat(Object.getOwnPropertySymbols(source).filter(function (sym) {
-          return Object.getOwnPropertyDescriptor(source, sym).enumerable;
-        }));
+      if (i % 2) {
+        ownKeys(source, true).forEach(function (key) {
+          _defineProperty(target, key, source[key]);
+        });
+      } else if (Object.getOwnPropertyDescriptors) {
+        Object.defineProperties(target, Object.getOwnPropertyDescriptors(source));
+      } else {
+        ownKeys(source).forEach(function (key) {
+          Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+        });
       }
-
-      ownKeys.forEach(function (key) {
-        _defineProperty(target, key, source[key]);
-      });
     }
 
     return target;
@@ -72,7 +87,8 @@
    */
   var MILLISECONDS_MULTIPLIER = 1000;
   var TRANSITION_END = 'transitionend';
-  var jQuery = window.jQuery; // Shoutout AngusCroll (https://goo.gl/pxwQGp)
+  var _window = window,
+      jQuery = _window.jQuery; // Shoutout AngusCroll (https://goo.gl/pxwQGp)
 
   var toType = function toType(obj) {
     return {}.toString.call(obj).match(/\s([a-z]+)/i)[1].toLowerCase();
@@ -88,7 +104,7 @@
 
     try {
       return document.querySelector(selector) ? selector : null;
-    } catch (err) {
+    } catch (error) {
       return null;
     }
   };
@@ -117,7 +133,9 @@
   };
 
   var triggerTransitionEnd = function triggerTransitionEnd(element) {
-    element.dispatchEvent(new Event(TRANSITION_END));
+    var evt = document.createEvent('HTMLEvents');
+    evt.initEvent(TRANSITION_END, true, true);
+    element.dispatchEvent(evt);
   };
 
   var isElement = function isElement(obj) {
@@ -185,7 +203,7 @@
     toggle: 'boolean',
     parent: '(string|element)'
   };
-  var Event$1 = {
+  var Event = {
     SHOW: "show" + EVENT_KEY,
     SHOWN: "shown" + EVENT_KEY,
     HIDE: "hide" + EVENT_KEY,
@@ -299,7 +317,7 @@
         }
       }
 
-      var startEvent = EventHandler.trigger(this._element, Event$1.SHOW);
+      var startEvent = EventHandler.trigger(this._element, Event.SHOW);
 
       if (startEvent.defaultPrevented) {
         return;
@@ -345,7 +363,7 @@
 
         _this.setTransitioning(false);
 
-        EventHandler.trigger(_this._element, Event$1.SHOWN);
+        EventHandler.trigger(_this._element, Event.SHOWN);
       };
 
       var capitalizedDimension = dimension[0].toUpperCase() + dimension.slice(1);
@@ -363,7 +381,7 @@
         return;
       }
 
-      var startEvent = EventHandler.trigger(this._element, Event$1.HIDE);
+      var startEvent = EventHandler.trigger(this._element, Event.HIDE);
 
       if (startEvent.defaultPrevented) {
         return;
@@ -407,7 +425,7 @@
 
         _this2._element.classList.add(ClassName.COLLAPSE);
 
-        EventHandler.trigger(_this2._element, Event$1.HIDDEN);
+        EventHandler.trigger(_this2._element, Event.HIDDEN);
       };
 
       this._element.style[dimension] = '';
@@ -431,7 +449,7 @@
     ;
 
     _proto._getConfig = function _getConfig(config) {
-      config = _objectSpread({}, Default, config);
+      config = _objectSpread2({}, Default, {}, config);
       config.toggle = Boolean(config.toggle); // Coerce string values
 
       typeCheckConfig(NAME, config, DefaultType);
@@ -447,21 +465,23 @@
     _proto._getParent = function _getParent() {
       var _this3 = this;
 
-      var parent;
+      var parent = this._config.parent;
 
-      if (isElement(this._config.parent)) {
-        parent = this._config.parent; // it's a jQuery object
-
-        if (typeof this._config.parent.jquery !== 'undefined' || typeof this._config.parent[0] !== 'undefined') {
-          parent = this._config.parent[0];
+      if (isElement(parent)) {
+        // it's a jQuery object
+        if (typeof parent.jquery !== 'undefined' || typeof parent[0] !== 'undefined') {
+          parent = parent[0];
         }
       } else {
-        parent = SelectorEngine.findOne(this._config.parent);
+        parent = SelectorEngine.findOne(parent);
       }
 
-      var selector = "[data-toggle=\"collapse\"][data-parent=\"" + this._config.parent + "\"]";
+      var selector = "[data-toggle=\"collapse\"][data-parent=\"" + parent + "\"]";
       makeArray(SelectorEngine.find(selector, parent)).forEach(function (element) {
-        _this3._addAriaAndCollapsedClass(Collapse._getTargetFromElement(element), [element]);
+        var selector = getSelectorFromElement(element);
+        var selected = selector ? SelectorEngine.findOne(selector) : null;
+
+        _this3._addAriaAndCollapsedClass(selected, [element]);
       });
       return parent;
     };
@@ -472,10 +492,10 @@
 
         if (triggerArray.length) {
           triggerArray.forEach(function (elem) {
-            if (!isOpen) {
-              elem.classList.add(ClassName.COLLAPSED);
-            } else {
+            if (isOpen) {
               elem.classList.remove(ClassName.COLLAPSED);
+            } else {
+              elem.classList.add(ClassName.COLLAPSED);
             }
 
             elem.setAttribute('aria-expanded', isOpen);
@@ -485,15 +505,10 @@
     } // Static
     ;
 
-    Collapse._getTargetFromElement = function _getTargetFromElement(element) {
-      var selector = getSelectorFromElement(element);
-      return selector ? SelectorEngine.findOne(selector) : null;
-    };
-
     Collapse._collapseInterface = function _collapseInterface(element, config) {
       var data = Data.getData(element, DATA_KEY);
 
-      var _config = _objectSpread({}, Default, Manipulator.getDataAttributes(element), typeof config === 'object' && config ? config : {});
+      var _config = _objectSpread2({}, Default, {}, Manipulator.getDataAttributes(element), {}, typeof config === 'object' && config ? config : {});
 
       if (!data && _config.toggle && /show|hide/.test(config)) {
         _config.toggle = false;
@@ -505,7 +520,7 @@
 
       if (typeof config === 'string') {
         if (typeof data[config] === 'undefined') {
-          throw new Error("No method named \"" + config + "\"");
+          throw new TypeError("No method named \"" + config + "\"");
         }
 
         data[config]();
@@ -543,7 +558,7 @@
    */
 
 
-  EventHandler.on(document, Event$1.CLICK_DATA_API, Selector.DATA_TOGGLE, function (event) {
+  EventHandler.on(document, Event.CLICK_DATA_API, Selector.DATA_TOGGLE, function (event) {
     // preventDefault only for <a> elements (which change the URL) not inside the collapsible element
     if (event.target.tagName === 'A') {
       event.preventDefault();
@@ -577,6 +592,8 @@
    * ------------------------------------------------------------------------
    * add .collapse to jQuery only if jQuery is present
    */
+
+  /* istanbul ignore if */
 
   if (typeof jQuery !== 'undefined') {
     var JQUERY_NO_CONFLICT = jQuery.fn[NAME];
